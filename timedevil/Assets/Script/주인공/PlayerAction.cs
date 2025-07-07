@@ -14,6 +14,7 @@ public class NewBehaviourScript : MonoBehaviour
     float v;
     bool isHorizonMove;
     Vector3 dirVec;
+    GameObject scanObject;
 
     void Awake()
     {
@@ -78,6 +79,12 @@ public class NewBehaviourScript : MonoBehaviour
             dirVec = Vector3.left;
         }
 
+        //Scan
+        if (Input.GetKeyDown(KeyCode.E) && scanObject != null)
+        {
+            Debug.Log("Scan Object: " + scanObject.name);
+        }
+
     }
 
     void FixedUpdate()
@@ -87,5 +94,15 @@ public class NewBehaviourScript : MonoBehaviour
         Vector2 moveVec = new Vector2(h, v).normalized;
 
         Debug.DrawRay(rigid.position, dirVec * 0.5f, new Color(0, 1, 0));
+        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object"));
+
+        if(rayhit.collider != null)
+        {
+            scanObject = rayhit.collider.gameObject;
+        }
+        else
+        {
+            scanObject = null;
+        }
     }
 }
