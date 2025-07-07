@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 
+
 public class NewBehaviourScript : MonoBehaviour
 {
     public float Speed;
@@ -12,6 +13,7 @@ public class NewBehaviourScript : MonoBehaviour
     float h;
     float v;
     bool isHorizonMove;
+    Vector3 dirVec;
 
     void Awake()
     {
@@ -58,11 +60,32 @@ public class NewBehaviourScript : MonoBehaviour
             anim.SetBool("isChange", false);
         }
 
+        //direction
+        if(vDown && v == 1)
+        {
+            dirVec = Vector3.up;
+        }
+        else if (vDown && v == -1)
+        {
+            dirVec = Vector3.down;
+        }
+        else if (hDown && h == 1)
+        {
+            dirVec = Vector3.right;
+        }
+        else if (hDown && h == -1)
+        {
+            dirVec = Vector3.left;
+        }
+
     }
 
     void FixedUpdate()
     {
+        //move
         rigid.velocity = new Vector2(h, v).normalized * Speed;
         Vector2 moveVec = new Vector2(h, v).normalized;
+
+        Debug.DrawRay(rigid.position, dirVec * 0.5f, new Color(0, 1, 0));
     }
 }
