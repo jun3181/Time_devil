@@ -6,7 +6,9 @@ using UnityEngine.Animations;
 
 public class NewBehaviourScript : MonoBehaviour
 {
+
     public float Speed;
+    public GameManager manager;
 
     Rigidbody2D rigid;
     Animator anim;
@@ -25,14 +27,15 @@ public class NewBehaviourScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        h = Input.GetAxisRaw("Horizontal");
-        v = Input.GetAxisRaw("Vertical");
+        h = Input.GetAxisRaw("Horizontal");//수직
+        v = Input.GetAxisRaw("Vertical"); //수평
 
         bool hDown = Input.GetButtonDown("Horizontal");
         bool vDown = Input.GetButtonDown("Vertical");
         bool hUp = Input.GetButtonUp("Horizontal");
         bool vUp = Input.GetButtonUp("Vertical");
 
+        //animation
         if (hDown)
         {
             isHorizonMove = true;
@@ -82,7 +85,7 @@ public class NewBehaviourScript : MonoBehaviour
         //Scan
         if (Input.GetKeyDown(KeyCode.E) && scanObject != null)
         {
-            Debug.Log("Scan Object: " + scanObject.name);
+            manager.Action(scanObject);
         }
 
     }
