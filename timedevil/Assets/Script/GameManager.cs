@@ -9,11 +9,22 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI talkText;
     public GameObject scanObject;
     public GameObject talkPanel;
+    public bool isAction;
 
     public void Action(GameObject scanObj)
     {
-        scanObject = scanObj;
-        talkText.text = "this name is" + scanObject.name + "unamsay\n";
+        if (isAction)
+        {
+            isAction = false;
+            talkPanel.SetActive(false);
+        }
+        else
+        {
+            isAction = true;
+            talkPanel.SetActive(true);
+            scanObject = scanObj;
+            talkText.text = "this name is" + scanObject.name + "unamsay\n";
+        }
 
     }
 
