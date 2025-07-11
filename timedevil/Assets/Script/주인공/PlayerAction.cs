@@ -27,13 +27,13 @@ public class NewBehaviourScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        h = Input.GetAxisRaw("Horizontal");//수직
-        v = Input.GetAxisRaw("Vertical"); //수평
+        h = manager.isAction ? 0 : Input.GetAxisRaw("Horizontal");//수직
+        v = manager.isAction ? 0 : Input.GetAxisRaw("Vertical"); //수평
 
-        bool hDown = Input.GetButtonDown("Horizontal");
-        bool vDown = Input.GetButtonDown("Vertical");
-        bool hUp = Input.GetButtonUp("Horizontal");
-        bool vUp = Input.GetButtonUp("Vertical");
+        bool hDown = manager.isAction ? false : Input.GetButtonDown("Horizontal");
+        bool vDown = manager.isAction ? false : Input.GetButtonDown("Vertical");
+        bool hUp = manager.isAction ? false : Input.GetButtonUp("Horizontal");
+        bool vUp = manager.isAction ? false : Input.GetButtonUp("Vertical");
 
         //animation
         if (hDown)

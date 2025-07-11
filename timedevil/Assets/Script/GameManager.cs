@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 public class GameManager : MonoBehaviour
@@ -16,27 +15,17 @@ public class GameManager : MonoBehaviour
         if (isAction)
         {
             isAction = false;
-            talkPanel.SetActive(false);
+            //talkPanel.SetActive(false);
         }
         else
         {
             isAction = true;
-            talkPanel.SetActive(true);
+            //talkPanel.SetActive(true);
             scanObject = scanObj;
             talkText.text = "this name is" + scanObject.name + "unamsay\n";
         }
 
-    }
+        talkPanel.SetActive(isAction);
 
-    void Start()
-    {
-
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 }
