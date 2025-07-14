@@ -1,7 +1,8 @@
-using System.Collections;
+Ôªøusing System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
+using UnityEngine.SceneManagement;
 
 
 public class NewBehaviourScript : MonoBehaviour
@@ -9,6 +10,7 @@ public class NewBehaviourScript : MonoBehaviour
 
     public float Speed;
     public GameManager manager;
+    public NextScene Next_Scene;
 
     Rigidbody2D rigid;
     Animator anim;
@@ -27,8 +29,8 @@ public class NewBehaviourScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        h = manager.isAction ? 0 : Input.GetAxisRaw("Horizontal");//ºˆ¡˜
-        v = manager.isAction ? 0 : Input.GetAxisRaw("Vertical"); //ºˆ∆Ú
+        h = manager.isAction ? 0 : Input.GetAxisRaw("Horizontal");//ÏàòÏßÅ
+        v = manager.isAction ? 0 : Input.GetAxisRaw("Vertical"); //ÏàòÌèâ
 
         bool hDown = manager.isAction ? false : Input.GetButtonDown("Horizontal");
         bool vDown = manager.isAction ? false : Input.GetButtonDown("Vertical");
@@ -83,10 +85,23 @@ public class NewBehaviourScript : MonoBehaviour
         }
 
         //Scan
-        if (Input.GetKeyDown(KeyCode.E) && scanObject != null)
+        if (Input.GetKeyDown(KeyCode.E))
         {
-            manager.Action(scanObject);
+            if (scanObject != null && scanObject.layer == LayerMask.NameToLayer("teleport"))
+            {
+                if (Next_Scene != null)
+                    Next_Scene.LoadBattleScene(scanObject);
+            }
+            else
+            {
+                if (manager != null)
+                    manager.Action(scanObject);
+            }
         }
+
+
+
+
 
     }
 
@@ -97,11 +112,13 @@ public class NewBehaviourScript : MonoBehaviour
         Vector2 moveVec = new Vector2(h, v).normalized;
 
         Debug.DrawRay(rigid.position, dirVec * 0.5f, new Color(0, 1, 0));
-        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object"));
+        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object", "teleport"));
 
-        if(rayhit.collider != null)
+
+        if (rayhit.collider != null)
         {
             scanObject = rayhit.collider.gameObject;
+            //Debug.Log($"Raycast hit: {scanObject.name} (Layer: {LayerMask.LayerToName(scanObject.layer)})");
         }
         else
         {

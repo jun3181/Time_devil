@@ -12,20 +12,21 @@ public class GameManager : MonoBehaviour
 
     public void Action(GameObject scanObj)
     {
+        if (scanObj == null || talkText == null || talkPanel == null)
+            return;
+
         if (isAction)
         {
             isAction = false;
-            //talkPanel.SetActive(false);
         }
         else
         {
             isAction = true;
-            //talkPanel.SetActive(true);
             scanObject = scanObj;
-            talkText.text = "this name is" + scanObject.name + "unamsay\n";
+            talkText.text = "this name is " + scanObject.name + " unamsay\n";
         }
 
         talkPanel.SetActive(isAction);
-
     }
+
 }
