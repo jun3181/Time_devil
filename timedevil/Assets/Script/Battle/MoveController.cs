@@ -1,16 +1,22 @@
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class MoveController : MonoBehaviour
 {
-    public Transform playerTransform;
-
-    private Vector2Int currentPos = new Vector2Int(0, 0); // ���� ��ǥ
-    private float tileSize = 1.0f; // Ÿ�� �� ĭ ũ��
+    public GameObject[] buttons;          // Card, Move, Item, Run 버튼들
+    public Transform playerTransform;     // Player_Stone의 Transform
+    public float tileSize = 1.0f;         // 한 칸 크기
 
     private bool isMoving = false;
 
-    public void StartMove()
+    public void OnMoveButton()
     {
+        Debug.Log("🚶 [MoveController] 이동 모드 시작");
+
+        // 버튼 비활성화
+        foreach (var btn in buttons)
+            btn.SetActive(false);
+
         isMoving = true;
     }
 
@@ -19,31 +25,29 @@ public class MoveController : MonoBehaviour
         if (!isMoving) return;
 
         if (Input.GetKeyDown(KeyCode.UpArrow))
-            TryMove(Vector2Int.up);
+            MovePlayer(Vector2Int.up);
         else if (Input.GetKeyDown(KeyCode.DownArrow))
-            TryMove(Vector2Int.down);
+            MovePlayer(Vector2Int.down);
         else if (Input.GetKeyDown(KeyCode.LeftArrow))
-            TryMove(Vector2Int.left);
+            MovePlayer(Vector2Int.left);
         else if (Input.GetKeyDown(KeyCode.RightArrow))
-            TryMove(Vector2Int.right);
+            MovePlayer(Vector2Int.right);
     }
 
-    void TryMove(Vector2Int dir)
+    void MovePlayer(Vector2Int dir)
     {
-        Vector2Int nextPos = currentPos + dir;
+        Vector3 newPos = playerTransform.position + new Vector3(dir.x * tileSize, dir.y * tileSize, 0);
+        playerTransform.position = newPos;
 
-        // ��� üũ
-        if (nextPos.x < 0 || nextPos.x > 3 || nextPos.y < 0 || nextPos.y > 3)
-            return;
+        Debug.Log($"🚶 [MoveController] {dir} 방향으로 이동 완료");
 
-        currentPos = nextPos;
-
-        Vector3 worldPos = new Vector3(currentPos.x * tileSize, currentPos.y * tileSize, 0);
-        playerTransform.position = worldPos;
-    }
-
-    public void EndMove()
-    {
         isMoving = false;
+
+        // 턴 종료
+        TurnManager.Instance.EndPlayerTurn();
+
+        // 버튼 다시 활성화
+        foreach (var btn in buttons)
+            btn.SetActive(true);
     }
 }
