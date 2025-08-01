@@ -1,7 +1,23 @@
 import logo from './logo.svg';
 import './App.css';
-import { motion } from "motion/react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { AnimatePresence, motion } from "motion/react";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+
+
+const Page = ({ children }) => {
+  return(
+    <motion.div
+      className = "page"
+      initial={{x:"100%"}}
+      animate={{x:0}}
+      exit={{x:"-100%"}}
+      transition={{duration:0.5}}
+    >
+      {children}</motion.div>
+  )
+
+
+}
 
 function Header() {
   return(
@@ -25,10 +41,24 @@ function HomePage(){
 function DownloadPage(){
   return(
     <div>
-      <img src = {logo}></img>
+      <img src = {logo} style = {{top: "50px"}}></img>
       <h1>게임설명</h1>
       <button>다운로드</button>
     </div>
+  )
+}
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <>
+      <Header/>
+      <AnimatePresence>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Page><HomePage /></Page>} />
+          <Route path="/download" element={<Page><DownloadPage /></Page>} />
+        </Routes>
+      </AnimatePresence>
+    </>
   )
 }
 
@@ -40,11 +70,8 @@ function App() {
       
       
       <BrowserRouter>
-      <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/download" element={<DownloadPage />} />
-        </Routes>
+        
+        <AnimatedRoutes />
       </BrowserRouter>
 
 
