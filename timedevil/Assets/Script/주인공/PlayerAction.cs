@@ -11,6 +11,7 @@ public class NewBehaviourScript : MonoBehaviour
     public float Speed;
     public GameManager manager;
     public NextScene Next_Scene;
+    public GetManager get_manager;
 
     Rigidbody2D rigid;
     Animator anim;
@@ -92,6 +93,12 @@ public class NewBehaviourScript : MonoBehaviour
                 if (Next_Scene != null)
                     Next_Scene.LoadBattleScene(scanObject);
             }
+            else if (scanObject != null && scanObject.layer == LayerMask.NameToLayer("item_get"))
+            {
+                if (manager != null)
+                    get_manager.Action(scanObject);
+
+            }
             else
             {
                 if (manager != null)
@@ -112,7 +119,7 @@ public class NewBehaviourScript : MonoBehaviour
         Vector2 moveVec = new Vector2(h, v).normalized;
 
         Debug.DrawRay(rigid.position, dirVec * 0.5f, new Color(0, 1, 0));
-        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object", "teleport"));
+        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object", "teleport", "item_get"));
 
 
         if (rayhit.collider != null)
