@@ -55,6 +55,7 @@ public class MenuController : MonoBehaviour
                     break;
                 case 1: // Card
                     Debug.Log("Card selected");
+                    SceneManager.LoadScene("Card");
                     break;
                 case 2: // Option
                     Debug.Log("Option selected");
