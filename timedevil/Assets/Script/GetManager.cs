@@ -1,36 +1,45 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+﻿using UnityEngine;
 using TMPro;
+
 public class GetManager : MonoBehaviour
 {
     public TextMeshProUGUI talkText;
-    public GameObject scanObject;
     public GameObject talkPanel;
     public bool isAction;
 
+    private GameObject scanObject;
+
     public void Action(GameObject scanObj)
     {
-        Debug.Log($"Raycast hit: {scanObj.name} (Layer: {LayerMask.LayerToName(scanObj.layer)})"); // ✅ 이거 꼭 확인
-
         if (scanObj == null || talkText == null || talkPanel == null)
-            return;
-
-        if (isAction)
         {
-            isAction = false;
+            Debug.LogWarning("[GetManager] 필드가 비어있거나 scanObj가 null임");
+            return;
         }
-        else
+
+        Debug.Log($"[GetManager] Raycast hit: {scanObj.name} (Layer: {LayerMask.LayerToName(scanObj.layer)})");
+
+        if (!isAction)
         {
             isAction = true;
             scanObject = scanObj;
-            talkText.text = "item get!!!\n";
-            JsonSaveManager.SaveItem(scanObj.name);
+            talkText.text = $"{scanObj.name} 아이템 획득!";
 
+            // 아이템을 ItemDatabase에 추가
+            if (ItemDatabase.Instance != null)
+            {
+                ItemDatabase.Instance.AddItem(scanObj.name);
+            }
+            else
+            {
+                Debug.LogError("[GetManager] ItemDatabase.Instance가 존재하지 않음!");
+            }
+        }
+        else
+        {
+            isAction = false;
         }
 
         talkPanel.SetActive(isAction);
     }
-
 }

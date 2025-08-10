@@ -105,7 +105,7 @@ public class NewBehaviourScript : MonoBehaviour
                     manager.Action(scanObject);
             }
         }
-
+        
 
 
 
