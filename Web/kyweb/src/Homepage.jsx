@@ -4,9 +4,9 @@ import logo from './logo.svg';
 
 function Comment(){
   let [comments, setComments] = useState([
-    {name: "홍길동", content: "안녕하세요!" },
-    {name: "김철수", content: "반갑습니다!" },
-    {name: "이영희", content: "좋은 하루 되세요!" }
+    {id: 0, name: "홍길동", content: "안녕하세요!" },
+    {id: 1, name: "김철수", content: "반갑습니다!" },
+    {id: 2, name: "이영희", content: "좋은 하루 되세요!" }
   ]);
   return(
     <div>
@@ -15,7 +15,7 @@ function Comment(){
         <p>
           <input type = "text" id = "content" placeholder = "댓글을 입력하세요"></input>
           <input type = "button" value = "전송" onClick = {() => {
-            setComments([...comments, {name: document.getElementById("commentbar").value, content: document.getElementById("content").value}]);
+            setComments([...comments, {id: comments.length, name: document.getElementById("commentbar").value, content: document.getElementById("content").value}]);
           }}></input>
         </p>
       </form>

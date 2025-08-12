@@ -8,7 +8,7 @@ import DownloadPage from "./Downloadpage.jsx";
 
 
 const Page = ({ children }) => {
-  return(
+  return( 
     <motion.div
       className = "page"
       initial={{x:"100%"}}
@@ -31,13 +31,13 @@ function Header() {
                    onClick={()=>{setActivePath("home")}}
                    initial = {false}
                    animate = {{backgroundColor: "home" === activePath ? "#eee" : "#eee0"}}>
-          <Link to="/">홈{"home" === activePath ? (<motion.span className = "slider" id = "underline" layoutId = "underline"/>) : null}</Link>
+          <Link to="/">홈{"home" === activePath ? (<motion.span className = "slider" layoutId = "underline"/>) : null}</Link>
         </motion.li>
         <motion.li key = "download" 
                    onClick={()=>{setActivePath("download")}}
                    initial = {false}
                    animate = {{backgroundColor: "download" === activePath ? "#eee" : "#eee0"}}>
-          <Link to="/download">다운로드{"download" === activePath ? (<motion.span className = "slider" id = "underline" layoutId = "underline"/>) : null}</Link>
+          <Link to="/download">다운로드{"download" === activePath ? (<motion.span className = "slider" layoutId = "underline"/>) : null}</Link>
         </motion.li>
 
       </ul>
