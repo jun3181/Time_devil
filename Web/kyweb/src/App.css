@@ -25,6 +25,7 @@
     
 }
 .header ul li{
+    position: relative;
     list-style: none;
     z-index: 2;
 }
@@ -35,6 +36,6 @@
     right: 0px;
     height: 2px;
     background-color:aqua;
-    z-index: 1;
+    
 
 }

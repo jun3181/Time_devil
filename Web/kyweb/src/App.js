@@ -22,22 +22,19 @@ const Page = ({ children }) => {
 
 function Header() {
   const location = useLocation();
-  const [activePath, setActivePath] = useState(location.pathname);
 
   return(
     <nav className = "header">
       <ul>
         <motion.li key = "home"
-                   onClick={()=>{setActivePath("home")}}
                    initial = {false}
-                   animate = {{backgroundColor: "home" === activePath ? "#eee" : "#eee0"}}>
-          <Link to="/">홈{"home" === activePath ? (<motion.span className = "slider" layoutId = "underline"/>) : null}</Link>
+                   animate = {{backgroundColor: "/" === location.pathname ? "#eee" : "#eee0"}}>
+          <Link to="/">홈</Link>{"/" === location.pathname ? (<motion.span className = "slider" layoutId = "slider"/>) : null}
         </motion.li>
         <motion.li key = "download" 
-                   onClick={()=>{setActivePath("download")}}
                    initial = {false}
-                   animate = {{backgroundColor: "download" === activePath ? "#eee" : "#eee0"}}>
-          <Link to="/download">다운로드{"download" === activePath ? (<motion.span className = "slider" layoutId = "underline"/>) : null}</Link>
+                   animate = {{backgroundColor: "/download" === location.pathname ? "#eee" : "#eee0"}}>
+          <Link to="/download">다운로드</Link>{"/download" === location.pathname ? (<motion.span className = "slider" layoutId = "slider"/>) : null}
         </motion.li>
 
       </ul>
