@@ -4,41 +4,45 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.SceneManagement;
 
-
 public class NewBehaviourScript : MonoBehaviour
 {
-
+    // ===== Public =====
     public float Speed;
     public GameManager manager;
     public NextScene Next_Scene;
     public GetManager get_manager;
 
+    // ===== Private =====
     Rigidbody2D rigid;
     Animator anim;
+
     float h;
     float v;
     bool isHorizonMove;
+
     Vector3 dirVec;
     GameObject scanObject;
 
+    // ===== Unity =====
     void Awake()
     {
         rigid = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
     }
 
-    // Update is called once per frame
+    // 매 프레임 호출
     void Update()
     {
-        h = manager.isAction ? 0 : Input.GetAxisRaw("Horizontal");//수직
-        v = manager.isAction ? 0 : Input.GetAxisRaw("Vertical"); //수평
+        // 입력 (액션 중에는 입력 무시)
+        h = manager.isAction ? 0 : Input.GetAxisRaw("Horizontal"); // 수평
+        v = manager.isAction ? 0 : Input.GetAxisRaw("Vertical");   // 수직
 
         bool hDown = manager.isAction ? false : Input.GetButtonDown("Horizontal");
         bool vDown = manager.isAction ? false : Input.GetButtonDown("Vertical");
         bool hUp = manager.isAction ? false : Input.GetButtonUp("Horizontal");
         bool vUp = manager.isAction ? false : Input.GetButtonUp("Vertical");
 
-        //animation
+        // 애니메이션 전환 기준 (가로/세로 우선)
         if (hDown)
         {
             isHorizonMove = true;
@@ -67,8 +71,8 @@ public class NewBehaviourScript : MonoBehaviour
             anim.SetBool("isChange", false);
         }
 
-        //direction
-        if(vDown && v == 1)
+        // 바라보는 방향 갱신
+        if (vDown && v == 1)
         {
             dirVec = Vector3.up;
         }
@@ -85,7 +89,7 @@ public class NewBehaviourScript : MonoBehaviour
             dirVec = Vector3.left;
         }
 
-        //Scan
+        // 상호작용
         if (Input.GetKeyDown(KeyCode.E))
         {
             if (scanObject != null && scanObject.layer == LayerMask.NameToLayer("teleport"))
@@ -97,7 +101,6 @@ public class NewBehaviourScript : MonoBehaviour
             {
                 if (manager != null)
                     get_manager.Action(scanObject);
-
             }
             else
             {
@@ -105,27 +108,29 @@ public class NewBehaviourScript : MonoBehaviour
                     manager.Action(scanObject);
             }
         }
-        
-
-
-
-
     }
 
+    // 물리 업데이트
     void FixedUpdate()
     {
-        //move
+        // 이동
         rigid.velocity = new Vector2(h, v).normalized * Speed;
         Vector2 moveVec = new Vector2(h, v).normalized;
 
+        // 앞 방향 레이캐스트
         Debug.DrawRay(rigid.position, dirVec * 0.5f, new Color(0, 1, 0));
-        RaycastHit2D rayhit = Physics2D.Raycast(rigid.position, dirVec, 0.7f, LayerMask.GetMask("Object", "teleport", "item_get"));
 
+        RaycastHit2D rayhit = Physics2D.Raycast(
+            rigid.position,
+            dirVec,
+            0.7f,
+            LayerMask.GetMask("Object", "teleport")
+        );
 
         if (rayhit.collider != null)
         {
             scanObject = rayhit.collider.gameObject;
-            //Debug.Log($"Raycast hit: {scanObject.name} (Layer: {LayerMask.LayerToName(scanObject.layer)})");
+            // Debug.Log($"Raycast hit: {scanObject.name} (Layer: {LayerMask.LayerToName(scanObject.layer)})");
         }
         else
         {
