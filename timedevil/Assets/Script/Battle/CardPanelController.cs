@@ -1,58 +1,152 @@
+ï»¿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CardPanelController : MonoBehaviour
 {
     [Header("UI")]
-    public GameObject cardGroup;     // Canvas ÇÏÀ§ÀÇ card_group (Ã³À½¿£ ºñÈ°¼ºÈ­)
-    public Button card5Button;       // card_group ¾ÈÀÇ 5.png ¹öÆ°
-    public Image card5Image;         // 5.png¸¦ Ç¥½ÃÇÒ Image
+    public GameObject cardGroup;
+    public Button card5Button;
+    public Image card5Image;
 
-    [Header("Resource")]
-    public string card5SpritePath = "my_asset/5"; // Assets/Resources/my_asset/5.png
+    [Header("Resources")]
+    public string card5SpritePath = "my_asset/5";       // 5.png
+    public string attackSpritePath = "my_asset/attack"; // ë¹¨ê°„ X
+
+    [Header("Board")]
+    public Transform enemyBoardOrigin; // â— í•œë²ˆë§Œ ë°°ì¹˜(ì  ë³´ë“œ ì¢Œí•˜ë‹¨)
+    public float tileSize = 1f;
+    public int sortingOrder = 20;
+
+    [Header("Timing")]
+    public float fadeInTime = 3.0f;
+    public float holdTime = 0.1f;
+    public float fadeOutTime = 0.6f;
+
+    // â–¶ ì¹´ë“œë³„ íŒ¨í„´ë§Œ ì—¬ê¸°ì„œ êµì²´/ì¶”ê°€í•˜ë©´ ë¨
+    // "5" ì¹´ë“œ
+    private static readonly string[] PATTERN_EDGE = {
+        "1010",
+        "0100",
+        "1010",
+        "0000"
+    };
+    // ì˜ˆì‹œ: "ì—£ì§€ë¼ì¸" ì¹´ë“œ (ìœ„/ì•„ë˜ ì „ë¶€ 1)
+    private static readonly string[] PATTERN_5 = {
+        "1111",
+        "0000",
+        "0000",
+        "1111"
+    };
 
     bool isOpen = false;
+    Sprite attackSprite;
+    readonly List<GameObject> spawned = new();
 
-    // ÇÏ´Ü "Card" ¹öÆ°¿¡¼­ È£Ãâ
     public void OnCardButton()
     {
         if (TurnManager.Instance.currentTurn != TurnState.PlayerTurn) return;
 
-        // 5.png ·Îµå ÈÄ ÆĞ³Î ¿­±â
         var sp = Resources.Load<Sprite>(card5SpritePath);
-        if (sp == null)
-        {
-            Debug.LogWarning($"[CardPanel] ½ºÇÁ¶óÀÌÆ®¸¦ Ã£À» ¼ö ¾øÀ½: {card5SpritePath}");
-            return;
-        }
+        if (!sp) { Debug.LogWarning($"not found: {card5SpritePath}"); return; }
 
         card5Image.sprite = sp;
-
-        // Áßº¹ µî·Ï ¹æÁöÇÏ°í Å¬¸¯ ÇÚµé·¯ ¿¬°á
-        card5Button.onClick.RemoveListener(OnCard5Clicked);
-        card5Button.onClick.AddListener(OnCard5Clicked);
+        card5Button.onClick.RemoveAllListeners();
+        // â—ì—¬ê¸°ì„œ ì–´ë–¤ íŒ¨í„´ì„ ì“¸ì§€ ì„ íƒ
+        card5Button.onClick.AddListener(() => OnCardChosen(PATTERN_5));
+        // ë‹¤ë¥¸ ì¹´ë“œë¥¼ ì¶”ê°€í•˜ë©´ ìœ„ì™€ ê°™ì´ OnClickì— PATTERN_EDGE ë“± ì—°ê²°ë§Œ ë°”ê¾¸ë©´ ë¨
 
         cardGroup.SetActive(true);
         isOpen = true;
-
-        Debug.Log("[CardPanel] Ä«µå ¼±ÅÃ ÆĞ³Î ¿­¸² (5.png Ç¥½Ã)");
     }
 
-    // Ä«µå(5.png) Å¬¸¯ ½Ã
-    public void OnCard5Clicked()
+    // ì„ íƒëœ ì¹´ë“œì˜ íŒ¨í„´ì„ ë°›ì•„ì„œ ì²˜ë¦¬
+    void OnCardChosen(string[] patternRows)
     {
         if (!isOpen) return;
+        Debug.Log("[Card] ì¹´ë“œ ì„ íƒ â†’ íŒ¨í„´ í‘œì‹œ ì‹œì‘");
 
-        Debug.Log("[CardPanel] 5 Å¬¸¯µÊ ¡æ °ø°İÆĞÅÏ ±¸Çö Àü ´Ü°è: ÅÏ Á¾·á");
-
-        // ÆĞ³Î ´İ±â
         cardGroup.SetActive(false);
         isOpen = false;
 
-        // Àû ÅÏÀ¸·Î ÀüÈ¯
-        TurnManager.Instance.EndPlayerTurn();
+        if (!attackSprite) attackSprite = Resources.Load<Sprite>(attackSpritePath);
+        if (!attackSprite) { Debug.LogWarning($"not found: {attackSpritePath}"); TurnManager.Instance.EndPlayerTurn(); return; }
 
-        // (´ÙÀ½ ´Ü°è¿¡¼­ ¿©±â¼­ °ø°İÆĞÅÏ Ç¥½Ã / µ¥¹ÌÁö Àû¿ëÀ» Ãß°¡)
-        // ShowAttackPattern(); enemy.TakeDamage(...);
+        StartCoroutine(PlayAttackFXThenEndTurn(patternRows));
+    }
+
+    IEnumerator PlayAttackFXThenEndTurn(string[] patternRows)
+    {
+        SpawnMarkers(patternRows);
+        yield return FadeMarkers(0f, 1f, fadeInTime); // ì ì  ë°ê²Œ(ì•½ 3ì´ˆ)
+        yield return new WaitForSeconds(holdTime);
+        yield return FadeMarkers(1f, 0f, fadeOutTime); // ì ì  ì‚¬ë¼ì§
+        ClearMarkers();
+
+        TurnManager.Instance.EndPlayerTurn();
+    }
+
+    void SpawnMarkers(string[] patternRows)
+    {
+        ClearMarkers();
+        if (!enemyBoardOrigin) { Debug.LogWarning("enemyBoardOrigin ë¯¸ì§€ì •"); return; }
+
+        for (int y = 0; y < 4; y++)
+        {
+            string row = (y < patternRows.Length) ? patternRows[y] : "0000";
+            for (int x = 0; x < 4; x++)
+            {
+                bool hit = (x < row.Length) && row[x] == '1';
+                if (!hit) continue;
+
+                var go = new GameObject($"attack ({x},{y})");
+                go.transform.position = enemyBoardOrigin.position + new Vector3(x * tileSize, y * tileSize, 0f);
+
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = attackSprite;
+                sr.sortingOrder = sortingOrder;
+                sr.color = new Color(1f, 1f, 1f, 0f); // ì²˜ìŒì—” íˆ¬ëª…
+
+                spawned.Add(go);
+            }
+        }
+    }
+
+    IEnumerator FadeMarkers(float from, float to, float duration)
+    {
+        if (duration <= 0f) duration = 0.001f;
+        float t = 0f;
+        var srs = new List<SpriteRenderer>(spawned.Count);
+        foreach (var go in spawned) if (go) srs.Add(go.GetComponent<SpriteRenderer>());
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float a = Mathf.Lerp(from, to, t / duration);
+            for (int i = 0; i < srs.Count; i++)
+            {
+                if (!srs[i]) continue;
+                var c = srs[i].color;
+                c.a = a;
+                srs[i].color = c;
+            }
+            yield return null;
+        }
+        // ë³´ì •
+        for (int i = 0; i < srs.Count; i++)
+        {
+            if (!srs[i]) continue;
+            var c = srs[i].color;
+            c.a = to;
+            srs[i].color = c;
+        }
+    }
+
+    void ClearMarkers()
+    {
+        for (int i = 0; i < spawned.Count; i++)
+            if (spawned[i]) Destroy(spawned[i]);
+        spawned.Clear();
     }
 }
