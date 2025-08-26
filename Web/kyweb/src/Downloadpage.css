@@ -1,0 +1,25 @@
+.download-button{
+	position: bottom;
+	color:white;
+	background-color:dodgerblue;
+	border:none;
+	border-radius:10px;
+	width:120px;
+	height:30px;
+	
+	transition: transform 0.2s ease;
+}
+.download-button:hover{
+	transform:scale(1.3);
+} 
+.download-button:active{
+	transform:scale(0.95);
+}
+.backgroundimg{
+    background-image: url(./logo.svg);
+    background-attachment: fixed;
+    background-size: cover;
+    height: 100vh;
+    background-position: center;
+    position: relative;
+}

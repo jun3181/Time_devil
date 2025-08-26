@@ -1,0 +1,26 @@
+.comment{
+    background-color: lightgray;
+    border-radius: 5px;
+    padding:2px;
+    margin:5px;
+}
+.description{
+    margin: 20px;
+}
+.backgroundimg{
+    background-image: url(./logo.svg);
+    background-attachment: fixed;
+    background-size: cover;
+    height: 100vh;
+    background-position: center;
+    position: relative;
+}
+.backgroundimg h2{
+    position: absolute;
+    top: 80%;
+    left: 10%;
+    transform: translate(-50%, -50%);
+    color: black;
+    font-size: 48px;
+    backdrop-filter: blur(10px);
+}
