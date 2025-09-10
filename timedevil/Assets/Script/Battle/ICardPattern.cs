@@ -1,8 +1,9 @@
+// ICardPattern.cs
 public interface ICardPattern
 {
-    // Resources °æ·Î (¿¹: "my_asset/Card1")
+    // ì¹´ë“œ ì´ë¯¸ì§€ ê²½ë¡œ (Resources ê¸°ì¤€ ê²½ë¡œ, ì˜ˆ: "my_asset/Card1")
     string CardImagePath { get; }
 
-    // 16±ÛÀÚ ¹®ÀÚ¿­(0/1) ÆĞÅÏ. ¿¹: "1111000011110000"
+    // 16ì¹¸ ê³µê²© íŒ¨í„´ (0/1 ë¬¸ìì—´, ê¸¸ì´ 16)
     string Pattern16 { get; }
 }

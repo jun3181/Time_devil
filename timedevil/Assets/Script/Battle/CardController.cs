@@ -1,77 +1,109 @@
+// CardController.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CardController : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Button openCardButton;  // "Card" ¹öÆ°
-    [SerializeField] private GameObject cardGroup;   // ÆĞ³Î
-    [SerializeField] private Image cardImage;        // Ä«µå º¸¿©ÁÙ Image
-    [SerializeField] private Button cardImageButton; // ÀÌ Image¿¡ ºÙÀº Button(Å¬¸¯¿ë)
+    [SerializeField] private Button openCardButton;   // "Card" ë²„íŠ¼
+    [SerializeField] private GameObject cardGroup;    // ì¹´ë“œ íŒ¨ë„
+    [SerializeField] private Image cardImage;         // ì¹´ë“œ ì´ë¯¸ì§€
+    [SerializeField] private Button cardImageButton;  // ì¹´ë“œ ì´ë¯¸ì§€ í´ë¦­ìš© ë²„íŠ¼
 
     [Header("Refs")]
-    [SerializeField] private MonoBehaviour patternProvider; // ICardPattern ±¸ÇöÃ¼ (¿¹: Image¿¡ ºÙÀº Card1)
     [SerializeField] private AttackController attackController;
 
-    private ICardPattern _pattern;
+    [Header("Resources í´ë”")]
+    [SerializeField] private string resourcesFolder = "my_asset";
 
-    private void Awake()
+    // ì´ë²ˆ ì„ íƒì—ì„œ ì‚¬ìš©í•  ì¹´ë“œ ì´ë¦„ (ì˜ˆ: "Card1")
+    private string currentCardName;
+
+    void Awake()
     {
-        // 1) ¹öÆ° ¸®½º³Ê ¸ÕÀú ¿¬°á (¿¡·¯°¡ ÀÖ¾îµµ Card ÆĞ³ÎÀº ¿­¸®°Ô)
-        if (openCardButton != null) openCardButton.onClick.AddListener(OpenPanel);
-        if (cardImageButton != null) cardImageButton.onClick.AddListener(OnCardClicked);
+        if (openCardButton) openCardButton.onClick.AddListener(OpenCardPanel);
+        if (cardImageButton) cardImageButton.onClick.AddListener(OnCardImageClicked);
+        if (cardGroup) cardGroup.SetActive(false);
+    }
 
-        if (cardGroup != null) cardGroup.SetActive(false);
+    // â–¶ Card ë²„íŠ¼
+    private void OpenCardPanel()
+    {
+        if (!cardGroup) return;
+        cardGroup.SetActive(true);
 
-        // 2) Pattern Provider °Ë»ç (¿©±â¼­ return ÇÏÁö ¸»°í, °æ°í¸¸) 
-        if (patternProvider == null)
+        // DBì—ì„œ ì²« ë²ˆì§¸ CardX ì„ íƒ
+        currentCardName = FindFirstCardName(ItemDatabase.Instance?.collectedItems);
+
+        // ì´ë¯¸ì§€ ë¡œë“œ
+        if (cardImage)
         {
-            Debug.LogError("[CardController] Pattern Provider°¡ ºñ¾îÀÖÀ½ (ICardPattern ±¸Çö ÄÄÆ÷³ÍÆ®¸¦ µå·¡±×ÇÏ¼¼¿ä)");
-            return; // ¡ç ÆĞ³Î¸¸ ¿­¸®¸é µÈ´Ù¸é ÀÌ return Áö¿öµµ µÊ. ´­·¶À» ¶§¸¸ ¸·À¸¸é µÊ.
-        }
-
-        _pattern = patternProvider as ICardPattern;
-        if (_pattern == null)
-        {
-            Debug.LogError("[CardController] Pattern Provider°¡ ICardPatternÀ» ±¸ÇöÇÏÁö ¾ÊÀ½");
-            return; // ¡ç ¸¶Âù°¡Áö·Î ÇÊ¿ä ½Ã °æ°í¸¸ ÇÏ°í ÁøÇàÇØµµ µÊ
-        }
-
-        // 3) Ä«µå ÀÌ¹ÌÁö ·Îµå
-        if (cardImage != null)
-        {
-            var sprite = Resources.Load<Sprite>(_pattern.CardImagePath);
-            if (sprite == null)
+            if (string.IsNullOrEmpty(currentCardName))
             {
-                Debug.LogError($"[CardController] Ä«µå ½ºÇÁ¶óÀÌÆ®¸¦ Ã£À» ¼ö ¾øÀ½: {_pattern.CardImagePath}");
+                cardImage.sprite = null;
+                return;
             }
-            else
-            {
-                cardImage.sprite = sprite;
-                cardImage.preserveAspect = true;
-                cardImage.raycastTarget = true;
-            }
+
+            var sprite = Resources.Load<Sprite>($"{resourcesFolder}/{currentCardName}");
+            cardImage.sprite = sprite;
+            cardImage.preserveAspect = true;
+            cardImage.raycastTarget = true;
+            cardImage.enabled = sprite != null;
         }
     }
 
-
-    private void OpenPanel()
+    // â–¶ ì¹´ë“œ ì´ë¯¸ì§€ í´ë¦­
+    private void OnCardImageClicked()
     {
-        if (cardGroup != null) cardGroup.SetActive(true);
-    }
+        if (string.IsNullOrEmpty(currentCardName) || attackController == null) return;
 
-    private void OnCardClicked()
-    {
-        if (_pattern == null || attackController == null)
+        // CardXë¼ëŠ” ì´ë¦„ì˜ MonoBehaviour(=ICardPattern êµ¬í˜„)ë¥¼ ì°¾ì•„ ì„ì‹œ GOì— ë¶™ì´ê³  íŒ¨í„´ì„ ì½ëŠ”ë‹¤.
+        var t = FindTypeByName(currentCardName);
+        if (t == null)
         {
-            Debug.LogError("[CardController] _pattern ¶Ç´Â attackController°¡ ¾øÀ½");
+            Debug.LogError($"[CardController] íƒ€ì…ì„ ì°¾ì„ ìˆ˜ ì—†ìŒ: {currentCardName}");
             return;
         }
 
-        // ÆĞÅÏ ½ÇÇà
-        attackController.ShowPattern(_pattern.Pattern16);
+        var tmp = new GameObject($"_CardPattern_{currentCardName}");
+        try
+        {
+            var comp = tmp.AddComponent(t);
+            var pattern = comp as ICardPattern;
+            if (pattern == null)
+            {
+                Debug.LogError($"[CardController] {currentCardName} ê°€ ICardPatternì„ êµ¬í˜„í•˜ì§€ ì•ŠìŒ");
+                return;
+            }
 
-        // ÆĞ³Î ´İ±â
-        if (cardGroup != null) cardGroup.SetActive(false);
+            attackController.ShowPattern(pattern.Pattern16); // 16ì¹¸ ë¬¸ìì—´ ì „ë‹¬
+        }
+        finally
+        {
+            Destroy(tmp);
+        }
+
+        // íŒ¨ë„ ë‹«ê¸°
+        if (cardGroup) cardGroup.SetActive(false);
+    }
+
+    // ë³´ìœ  ëª©ë¡ì—ì„œ "Card"ë¡œ ì‹œì‘í•˜ëŠ” ì²« í•­ëª©
+    private string FindFirstCardName(List<string> items)
+    {
+        if (items == null) return null;
+        foreach (var name in items)
+            if (!string.IsNullOrEmpty(name) && name.StartsWith("Card"))
+                return name.Trim();
+        return null;
+    }
+
+    // ì´ë¦„ìœ¼ë¡œ íƒ€ì… ì°¾ê¸° (ì–´ì…ˆë¸”ë¦¬ ì „ìˆ˜ê²€ì‚¬)
+    private static Type FindTypeByName(string typeName)
+    {
+        var asm = typeof(CardController).Assembly;
+        return asm.GetTypes().FirstOrDefault(t => t.Name == typeName && typeof(MonoBehaviour).IsAssignableFrom(t));
     }
 }

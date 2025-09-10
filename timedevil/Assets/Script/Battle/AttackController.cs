@@ -1,3 +1,4 @@
+// AttackController.cs (ëë‚˜ë©´ ìƒëŒ€ í„´ìœ¼ë¡œ ì „í™˜ ì¶”ê°€)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,10 +8,10 @@ public class AttackController : MonoBehaviour
     [System.Serializable]
     public struct CellPos { public float x; public float y; }
 
-    [Header("EnemyPanel 16¼¿ ¿ùµå ÁÂÇ¥ (ÀÎµ¦½º 0~15)")]
+    [Header("EnemyPanel 16ì…€ ì›”ë“œ ì¢Œí‘œ (ì¸ë±ìŠ¤ 0~15)")]
     public List<CellPos> cellPositions = new List<CellPos>(16);
 
-    [Header("Marker (Resources °æ·Î)")]
+    [Header("Marker (Resources ê²½ë¡œ)")]
     public string markerSpritePath = "my_asset/attack";
     public int sortingOrder = 40;
 
@@ -25,31 +26,29 @@ public class AttackController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(pattern16) || pattern16.Length != 16)
         {
-            Debug.LogError("[AttackController] pattern16Àº Á¤È®È÷ 16±ÛÀÚ¿©¾ß ÇÔ");
+            Debug.LogError("[AttackController] pattern16ì€ ì •í™•íˆ 16ê¸€ìì—¬ì•¼ í•¨");
             return;
         }
-
         StartCoroutine(Co_Show(pattern16));
     }
 
     private IEnumerator Co_Show(string pattern16)
     {
-        // Á¤¸®
         foreach (var sr in _spawned) if (sr) Destroy(sr.gameObject);
         _spawned.Clear();
 
         var sprite = Resources.Load<Sprite>(markerSpritePath);
         if (sprite == null)
         {
-            Debug.LogError($"[AttackController] ¸¶Ä¿ ½ºÇÁ¶óÀÌÆ® ¸ø Ã£À½: {markerSpritePath}");
+            Debug.LogError($"[AttackController] ë§ˆì»¤ ìŠ¤í”„ë¼ì´íŠ¸ ëª» ì°¾ìŒ: {markerSpritePath}");
             yield break;
         }
 
-        // 1) ¸¶Ä¿ »ı¼º (¾ËÆÄ 0À¸·Î ½ÃÀÛ)
+        // ìƒì„± (1ì€ í™œì„±í™”, 0ì€ ë¹„í™œì„±í™”)
         for (int i = 0; i < 16; i++)
         {
             if (pattern16[i] != '1') continue;
-            if (i >= cellPositions.Count) { Debug.LogWarning($"¼¿ ÁÂÇ¥ ¾øÀ½: {i}"); continue; }
+            if (i >= cellPositions.Count) { Debug.LogWarning($"ì…€ ì¢Œí‘œ ì—†ìŒ: {i}"); continue; }
 
             var pos = new Vector3(cellPositions[i].x, cellPositions[i].y, 0f);
             var go = new GameObject($"attack ({i})");
@@ -63,43 +62,42 @@ public class AttackController : MonoBehaviour
             _spawned.Add(sr);
         }
 
-        // 2) ÆäÀÌµå ÀÎ
+        // í˜ì´ë“œ ì¸
         if (fadeIn > 0f)
         {
             float t = 0;
             while (t < fadeIn)
             {
                 t += Time.deltaTime;
-                float a = Mathf.Clamp01(t / fadeIn);
-                SetAlpha(a);
+                SetAlpha(Mathf.Clamp01(t / fadeIn));
                 yield return null;
             }
         }
         else SetAlpha(1f);
 
-        // 3) À¯Áö
+        // ìœ ì§€
         if (hold > 0f) yield return new WaitForSeconds(hold);
 
-        // 4) ÆäÀÌµå ¾Æ¿ô
+        // í˜ì´ë“œ ì•„ì›ƒ
         if (fadeOut > 0f)
         {
             float t = 0;
             while (t < fadeOut)
             {
                 t += Time.deltaTime;
-                float a = 1f - Mathf.Clamp01(t / fadeOut);
-                SetAlpha(a);
+                SetAlpha(1f - Mathf.Clamp01(t / fadeOut));
                 yield return null;
             }
         }
         else SetAlpha(0f);
 
-        // 5) Á¤¸® (¿©±â¼­ ÅÏ ÀüÈ¯ È£Ãâ)
+        // ì •ë¦¬
         foreach (var sr in _spawned) if (sr) Destroy(sr.gameObject);
         _spawned.Clear();
 
-        // TODO: TurnManager·Î "»ó´ë ÅÏ" ÀüÈ¯ È£Ãâ
-        // FindObjectOfType<TurnManager>()?.SetEnemyTurn();
+        // â–¶ í”Œë ˆì´ì–´ ê³µê²© ë â†’ ìƒëŒ€ í„´
+        if (TurnManager.Instance != null)
+            TurnManager.Instance.EndPlayerTurn();
     }
 
     private void SetAlpha(float a)
