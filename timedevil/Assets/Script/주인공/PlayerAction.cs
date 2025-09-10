@@ -124,7 +124,7 @@ public class NewBehaviourScript : MonoBehaviour
             rigid.position,
             dirVec,
             0.7f,
-            LayerMask.GetMask("Object", "teleport")
+            LayerMask.GetMask("Object", "teleport", "item_get")
         );
 
         if (rayhit.collider != null)
