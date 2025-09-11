@@ -109,15 +109,18 @@ void EnemyMove()
         var go = new GameObject($"_EnemyPattern_{enemyName}");
         try
         {
-            var comp = go.AddComponent(t) as ICardPattern;
-            if (comp == null) { EndEnemyTurn(); return; }
+        // TurnManager.cs → EnemyAttack() 내부 변경 부분만
+        var comp = go.AddComponent(t) as ICardPattern;
+        if (comp == null) { EndEnemyTurn(); return; }
 
-            // ▶ 왼쪽 패널(플레이어 영역)에 표시
-            attackController.ShowPattern(comp.Pattern16, AttackController.Panel.Player);
+        // 기존: attackController.ShowPattern(comp.Pattern16, AttackController.Panel.Player);
+        // 수정: timings + panel 전달
+        attackController.ShowPattern(comp.Pattern16, comp.Timings, AttackController.Panel.Player);
 
-            // 페이드 연출 시간을 고려해 딜레이 후 턴 종료
-            float delay = attackController.fadeIn + attackController.hold + attackController.fadeOut + 0.05f;
-            Invoke(nameof(EndEnemyTurn), delay);
+        // 지연 시간 계산도 AttackController가 산출한 총 소요시간 사용
+        float delay = attackController.LastTotalDuration + 0.05f;
+        Invoke(nameof(EndEnemyTurn), delay);
+
         }
         finally
         {
