@@ -1,16 +1,26 @@
+// RunController.cs
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class RunController : MonoBehaviour
 {
-    [SerializeField] private AttackController attackController;
+    [SerializeField] private Button runButton;     // (옵션) Run 버튼 연결
+    [SerializeField] private string myroomScene = "Myroom";
 
-    public void OnRun()
+    void Awake()
     {
-        // 연출 클리어
-        if (attackController) attackController.ClearAllImmediate();
+        if (runButton != null)
+        {
+            runButton.onClick.RemoveAllListeners();
+            runButton.onClick.AddListener(OnRunClicked);
+        }
+    }
 
-        // 도망 100% 가정 → Myroom 복귀
-        SceneManager.LoadScene("Myroom");
+    // UI 이벤트에 직접 연결해도 됩니다.
+    public void OnRunClicked()
+    {
+        Time.timeScale = 1f; // 혹시 멈춰있다면 복구
+        SceneManager.LoadScene(myroomScene, LoadSceneMode.Single);
     }
 }
