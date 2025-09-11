@@ -1,158 +1,173 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// 적/플레이어 패널 위에 공격 마커를 시간차로 표시하는 컨트롤러
-/// - 패널은 4x4 = 16셀 고정
-/// - pattern16: '0'/'1' 16글자 (왼→오, 위→아래)
-/// - timings : 인덱스별 지연 시간(초). null 이면 전부 0초로 처리
-/// </summary>
 public class AttackController : MonoBehaviour
 {
-    [System.Serializable]
-    public struct CellPos { public float x; public float y; }
-
-    public enum Panel { Enemy, Player } // Enemy=오른쪽, Player=왼쪽
-
-    [Header("Enemy Panel 16셀 월드 좌표 (인덱스 0~15)")]
-    public List<CellPos> enemyCellPositions = new List<CellPos>(16);
-
-    [Header("Player Panel 16셀 월드 좌표 (인덱스 0~15)")]
-    public List<CellPos> playerCellPositions = new List<CellPos>(16);
+    // 어느 보드(패널)에 표시할지
+    public enum Panel { Player, Enemy }
 
     [Header("Marker (Resources 경로)")]
+    [Tooltip("Resources 폴더 기준 스프라이트 경로 (예: my_asset/attack)")]
     public string markerSpritePath = "my_asset/attack";
+
+    [Tooltip("SpriteRenderer.sortingOrder")]
     public int sortingOrder = 40;
 
+    [Tooltip("생성되는 마커 Z 좌표 고정값 (보드 위로 보이도록 -2 권장)")]
+    public float zOverride = -2f;
+
     [Header("Fade (sec)")]
-    public float fadeIn = 0.6f;
-    public float hold   = 0.1f;
-    public float fadeOut= 0.6f;
+    public float fadeIn  = 0.6f;
+    public float hold    = 0.1f;
+    public float fadeOut = 0.6f;
 
-    // (옵션) 외부에서 구독 가능
-    public System.Action OnPatternFinished;
+    [Header("좌표(왼/오 패널 각 16칸, 인덱스 0~15)")]
+    [Tooltip("플레이어(왼쪽) 보드의 16칸 월드 좌표")]
+    public List<Vector3> playerPanelWorld = new List<Vector3>(16);
 
-    // 실행 중/마지막 총 소요시간(초) 노출
-    public float LastTotalDuration { get; private set; }
+    [Tooltip("적(오른쪽) 보드의 16칸 월드 좌표")]
+    public List<Vector3> enemyPanelWorld  = new List<Vector3>(16);
 
-    readonly List<SpriteRenderer> _spawned = new();
+    // 내부 관리
+    private readonly List<SpriteRenderer> _spawned = new();
 
-    /// <summary>기본: Enemy 패널, 지연시간 없음</summary>
+    // ------------------------ Public API ------------------------
+
+    /// <summary>
+    /// 모든 마커 즉시 제거 + 코루틴 정지
+    /// </summary>
+    public void ClearAllImmediate()
+    {
+        StopAllCoroutines();
+        foreach (var sr in _spawned)
+            if (sr) Destroy(sr.gameObject);
+        _spawned.Clear();
+    }
+
+    /// <summary>
+    /// 타이밍 배열을 고려한 총 연출 시간(가장 늦게 시작하는 칸의 delay + fadeIn + hold + fadeOut)
+    /// </summary>
+    public float GetSequenceDuration(float[] timings)
+    {
+        float maxDelay = (timings != null && timings.Length == 16) ? timings.Max() : 0f;
+        return maxDelay + fadeIn + hold + fadeOut + 0.02f; // 약간의 여유
+    }
+
+    /// <summary>
+    /// 패턴만 주고 표시(오버로드). 기본 패널은 Enemy(오른쪽), 모든 타이밍 0.
+    /// </summary>
     public void ShowPattern(string pattern16)
-        => ShowPattern(pattern16, null, Panel.Enemy);
+    {
+        var zeros = new float[16]; // 전부 0f
+        ShowPattern(pattern16, zeros, Panel.Enemy);
+    }
 
-    /// <summary>지연시간과 패널 지정</summary>
-    public void ShowPattern(string pattern16, float[] timings, Panel panel = Panel.Enemy)
+    /// <summary>
+    /// 패턴 + 타이밍 + 패널 지정 표시
+    /// </summary>
+    public void ShowPattern(string pattern16, float[] timings, Panel panel)
     {
         if (string.IsNullOrEmpty(pattern16) || pattern16.Length != 16)
         {
             Debug.LogError("[AttackController] pattern16은 정확히 16글자여야 합니다.");
             return;
         }
-        StartCoroutine(Co_Show(pattern16, timings, panel));
+        if (timings == null || timings.Length != 16)
+        {
+            Debug.LogWarning("[AttackController] timings가 비었거나 16이 아니라서 0으로 대체합니다.");
+            timings = new float[16];
+        }
+
+        StartCoroutine(Co_ShowTimed(pattern16, timings, panel));
     }
 
-    IEnumerator Co_Show(string pattern16, float[] timings, Panel panel)
+    // ------------------------ Coroutines ------------------------
+
+    private IEnumerator Co_ShowTimed(string pattern16, float[] timings, Panel panel)
     {
-        // 이전 것 정리
-        ClearAll();
+        ClearAllImmediate();
 
         var sprite = Resources.Load<Sprite>(markerSpritePath);
-        if (sprite == null)
+        if (!sprite)
         {
-            Debug.LogError($"[AttackController] 마커 스프라이트를 찾을 수 없음: {markerSpritePath}");
+            Debug.LogError($"[AttackController] 마커 스프라이트를 찾지 못했습니다: {markerSpritePath}");
             yield break;
         }
 
-        // 대상 패널 좌표 참조
-        var cells = (panel == Panel.Enemy) ? enemyCellPositions : playerCellPositions;
-        if (cells == null || cells.Count < 16)
-        {
-            Debug.LogError("[AttackController] 16개의 셀 좌표가 필요합니다.");
-            yield break;
-        }
+        var cells = (panel == Panel.Player) ? playerPanelWorld : enemyPanelWorld;
 
-        // 각 셀에 대해 시간차 스폰
-        float maxDelay = 0f;
+        // 각 "1" 칸을 개별 코루틴으로 타이밍에 맞춰 생성
         for (int i = 0; i < 16; i++)
         {
             if (pattern16[i] != '1') continue;
 
-            float delay = (timings != null && i < timings.Length) ? Mathf.Max(0f, timings[i]) : 0f;
-            if (delay > maxDelay) maxDelay = delay;
+            if (i >= cells.Count)
+            {
+                Debug.LogWarning($"[AttackController] 좌표 리스트에 인덱스 {i}가 없습니다.");
+                continue;
+            }
 
-            // 셀 인덱스 보존하여 코루틴 호출
-            StartCoroutine(SpawnOne(i, sprite, cells, delay));
+            StartCoroutine(Co_SpawnOne(sprite, cells[i], timings[i]));
         }
 
-        // 전체 예상 소요시간 = 가장 늦은 시작 + (fadeIn + hold + fadeOut)
-        LastTotalDuration = maxDelay + fadeIn + hold + fadeOut;
+        // 전체 연출이 끝날 때까지 대기 후 자동 정리
+        float total = GetSequenceDuration(timings);
+        yield return new WaitForSeconds(total);
 
-        // 모두 끝날 때까지 대기
-        yield return new WaitForSeconds(LastTotalDuration + 0.01f);
-
-        // 혹시 남아있는 것 정리
-        ClearAll();
-
-        OnPatternFinished?.Invoke();
+        ClearAllImmediate(); // 필요 없다면 이 줄 제거해서 마커 유지 가능
     }
 
-    IEnumerator SpawnOne(int index, Sprite sprite, List<CellPos> cells, float delay)
+    private IEnumerator Co_SpawnOne(Sprite sprite, Vector3 worldPos, float delay)
     {
-        yield return new WaitForSeconds(delay);
+        // 시작 지연
+        if (delay > 0f) yield return new WaitForSeconds(delay);
 
-        if (index >= cells.Count) yield break;
-
-        var pos = new Vector3(cells[index].x, cells[index].y, -2f); // Z 고정
-        var go = new GameObject($"attack ({index})");
-        go.transform.position = pos;
+        // GO 생성
+        var go = new GameObject("attack");
+        go.transform.position = new Vector3(worldPos.x, worldPos.y, zOverride);
 
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = sprite;
         sr.sortingLayerName = "Default";
         sr.sortingOrder = sortingOrder;
-        sr.color = new Color(1, 1, 1, 0f);
-
+        sr.color = new Color(1f, 1f, 1f, 0f); // alpha 0 시작
         _spawned.Add(sr);
 
-        // 페이드 인
+        // Fade In
         if (fadeIn > 0f)
         {
             float t = 0f;
             while (t < fadeIn)
             {
                 t += Time.deltaTime;
-                float a = Mathf.Clamp01(t / fadeIn);
-                SetAlpha(sr, a);
+                SetAlpha(sr, Mathf.Clamp01(t / fadeIn));
                 yield return null;
             }
         }
         else SetAlpha(sr, 1f);
 
-        // 유지
+        // Hold
         if (hold > 0f) yield return new WaitForSeconds(hold);
 
-        // 페이드 아웃
+        // Fade Out
         if (fadeOut > 0f)
         {
             float t = 0f;
             while (t < fadeOut)
             {
                 t += Time.deltaTime;
-                float a = 1f - Mathf.Clamp01(t / fadeOut);
-                SetAlpha(sr, a);
+                SetAlpha(sr, 1f - Mathf.Clamp01(t / fadeOut));
                 yield return null;
             }
         }
         else SetAlpha(sr, 0f);
-
-        // 정리
-        if (sr) _spawned.Remove(sr);
-        if (sr) Destroy(sr.gameObject);
     }
 
-    void SetAlpha(SpriteRenderer sr, float a)
+    // ------------------------ Helpers ------------------------
+
+    private static void SetAlpha(SpriteRenderer sr, float a)
     {
         if (!sr) return;
         var c = sr.color;
@@ -160,22 +175,20 @@ public class AttackController : MonoBehaviour
         sr.color = c;
     }
 
-    // AttackController.cs 내부에 메서드 추가
-    public void ClearImmediate()
+#if UNITY_EDITOR
+    // 에디터에서 16칸 보장하는 편의(선택)
+    private void OnValidate()
     {
-    StopAllCoroutines();
-    for (int i = 0; i < _spawned.Count; i++)
-        if (_spawned[i]) Destroy(_spawned[i].gameObject);
-    _spawned.Clear();
-    }
-
-
-    void ClearAll()
-    {
-        for (int i = 0; i < _spawned.Count; i++)
+        if (playerPanelWorld.Count != 16)
         {
-            if (_spawned[i]) Destroy(_spawned[i].gameObject);
+            while (playerPanelWorld.Count < 16) playerPanelWorld.Add(Vector3.zero);
+            while (playerPanelWorld.Count > 16) playerPanelWorld.RemoveAt(playerPanelWorld.Count - 1);
         }
-        _spawned.Clear();
+        if (enemyPanelWorld.Count != 16)
+        {
+            while (enemyPanelWorld.Count < 16) enemyPanelWorld.Add(Vector3.zero);
+            while (enemyPanelWorld.Count > 16) enemyPanelWorld.RemoveAt(enemyPanelWorld.Count - 1);
+        }
     }
+#endif
 }

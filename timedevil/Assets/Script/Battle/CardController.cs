@@ -1,17 +1,13 @@
-// CardController.cs
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CardController : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Button openCardButton;   // "Card" 버튼
-    [SerializeField] private GameObject cardGroup;    // 카드 패널
+    [SerializeField] private Button openCardButton;   // "Card"
+    [SerializeField] private GameObject cardGroup;    // 패널
     [SerializeField] private Image cardImage;         // 카드 이미지
-    [SerializeField] private Button cardImageButton;  // 카드 이미지 클릭용 버튼
+    [SerializeField] private Button cardImageButton;  // 카드 이미지 위 버튼
 
     [Header("Refs")]
     [SerializeField] private AttackController attackController;
@@ -19,91 +15,84 @@ public class CardController : MonoBehaviour
     [Header("Resources 폴더")]
     [SerializeField] private string resourcesFolder = "my_asset";
 
-    // 이번 선택에서 사용할 카드 이름 (예: "Card1")
-    private string currentCardName;
+    private ICardPattern _pattern; // ✅ 누락됐던 필드
 
-    void Awake()
+    private void Awake()
     {
-        if (openCardButton) openCardButton.onClick.AddListener(OpenCardPanel);
-        if (cardImageButton) cardImageButton.onClick.AddListener(OnCardImageClicked);
+        if (openCardButton)    openCardButton.onClick.AddListener(OpenPanel);
+        if (cardImageButton)   cardImageButton.onClick.AddListener(OnCardImageClicked); // ✅ 메서드명 일치
+
         if (cardGroup) cardGroup.SetActive(false);
     }
 
-    // ▶ Card 버튼
-    private void OpenCardPanel()
+    private void OnEnable()
     {
-        if (!cardGroup) return;
-        cardGroup.SetActive(true);
+        // 인벤토리/DB에서 현재 선택 카드명 가져오기 (예: "Card1")
+        string cardName = (ItemDatabase.Instance != null && ItemDatabase.Instance.collectedItems.Count > 0)
+                            ? ItemDatabase.Instance.collectedItems[0]
+                            : "Card1";
 
-        // DB에서 첫 번째 CardX 선택
-        currentCardName = FindFirstCardName(ItemDatabase.Instance?.collectedItems);
-
-        // 이미지 로드
-        if (cardImage)
+        // 해당 타입의 스크립트 동적 생성하여 ICardPattern 읽기
+        var type = System.Type.GetType(cardName) ?? FindTypeByName(cardName);
+        if (type != null)
         {
-            if (string.IsNullOrEmpty(currentCardName))
-            {
-                cardImage.sprite = null;
-                return;
-            }
+            var go = new GameObject($"_CardProvider_{cardName}");
+            var comp = go.AddComponent(type) as ICardPattern;
+            _pattern = comp;
 
-            var sprite = Resources.Load<Sprite>($"{resourcesFolder}/{currentCardName}");
-            cardImage.sprite = sprite;
-            cardImage.preserveAspect = true;
-            cardImage.raycastTarget = true;
-            cardImage.enabled = sprite != null;
+            // 카드 이미지 세팅
+            if (cardImage && _pattern != null)
+            {
+                var sprite = Resources.Load<Sprite>(_pattern.CardImagePath);
+                cardImage.sprite = sprite;
+                cardImage.preserveAspect = true;
+                cardImage.raycastTarget = true;
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[CardController] 카드 타입을 찾지 못함: {cardName}");
         }
     }
 
-    // ▶ 카드 이미지 클릭
+    private void OnDisable()
+    {
+        // 임시 생성한 _CardProvider_* 정리
+        var temp = GameObject.Find($"_CardProvider_{_pattern?.GetType().Name}");
+        if (temp) Destroy(temp);
+    }
+
+    private void OpenPanel()
+    {
+        if (cardGroup) cardGroup.SetActive(true);
+    }
+
+    // ✅ 버튼 클릭 시 호출되는 실제 메서드
     private void OnCardImageClicked()
     {
-        if (string.IsNullOrEmpty(currentCardName) || attackController == null) return;
-
-        // CardX라는 이름의 MonoBehaviour(=ICardPattern 구현)를 찾아 임시 GO에 붙이고 패턴을 읽는다.
-        var t = FindTypeByName(currentCardName);
-        if (t == null)
+        if (_pattern == null || attackController == null)
         {
-            Debug.LogError($"[CardController] 타입을 찾을 수 없음: {currentCardName}");
+            Debug.LogError("[CardController] _pattern 또는 attackController가 없음");
             return;
         }
 
-        var tmp = new GameObject($"_CardPattern_{currentCardName}");
-        try
-        {
-            var comp = tmp.AddComponent(t);
-            var pattern = comp as ICardPattern;
-            if (pattern == null)
-            {
-                Debug.LogError($"[CardController] {currentCardName} 가 ICardPattern을 구현하지 않음");
-                return;
-            }
+        // 패턴/타이밍을 사용해서 오른쪽(Enemy) 패널에 표시
+        var timings = _pattern.Timings ?? new float[16];
+        attackController.ShowPattern(_pattern.Pattern16, timings, AttackController.Panel.Enemy);
 
-            attackController.ShowPattern(pattern.Pattern16); // 16칸 문자열 전달
-        }
-        finally
-        {
-            Destroy(tmp);
-        }
+        // 턴 종료 예약 (표시 연출이 모두 끝난 뒤)
+        float total = attackController.GetSequenceDuration(timings);
+        TurnManager.Instance.Invoke(nameof(TurnManager.EndPlayerTurn), total);
 
-        // 패널 닫기
         if (cardGroup) cardGroup.SetActive(false);
     }
 
-    // 보유 목록에서 "Card"로 시작하는 첫 항목
-    private string FindFirstCardName(List<string> items)
-    {
-        if (items == null) return null;
-        foreach (var name in items)
-            if (!string.IsNullOrEmpty(name) && name.StartsWith("Card"))
-                return name.Trim();
-        return null;
-    }
-
-    // 이름으로 타입 찾기 (어셈블리 전수검사)
-    private static Type FindTypeByName(string typeName)
+    // Type 찾기 보조
+    private static System.Type FindTypeByName(string typeName)
     {
         var asm = typeof(CardController).Assembly;
-        return asm.GetTypes().FirstOrDefault(t => t.Name == typeName && typeof(MonoBehaviour).IsAssignableFrom(t));
+        foreach (var t in asm.GetTypes())
+            if (t.Name == typeName) return t;
+        return null;
     }
 }

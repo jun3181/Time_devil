@@ -1,40 +1,16 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-using System.Collections;
 
 public class RunController : MonoBehaviour
 {
-    [SerializeField] private Button runBtn;
-    [SerializeField] private AttackController attackController; // 있으면 마커 정리
-    [SerializeField] private string myroomSceneName = "Myroom";
-    [SerializeField] private float exitDelay = 0f; // 필요 없으면 0
+    [SerializeField] private AttackController attackController;
 
-    void Awake()
+    public void OnRun()
     {
-        if (runBtn) runBtn.onClick.AddListener(TryRun);
-    }
+        // 연출 클리어
+        if (attackController) attackController.ClearAllImmediate();
 
-    public void TryRun()
-    {
-        // 100% 성공
-        if (attackController) attackController.ClearImmediate();
-        if (TurnManager.Instance) TurnManager.Instance.CancelInvoke();
-
-        Time.timeScale = 1f;
-
-        if (exitDelay > 0f) StartCoroutine(ExitAfterDelay());
-        else ExitNow();
-    }
-
-    IEnumerator ExitAfterDelay()
-    {
-        yield return new WaitForSeconds(exitDelay);
-        ExitNow();
-    }
-
-    void ExitNow()
-    {
-        SceneManager.LoadScene(myroomSceneName, LoadSceneMode.Single);
+        // 도망 100% 가정 → Myroom 복귀
+        SceneManager.LoadScene("Myroom");
     }
 }

@@ -99,33 +99,29 @@ void EnemyMove()
 
     void EnemyAttack()
     {
-        if (attackController == null) { EndEnemyTurn(); return; }
+    if (attackController == null) { EndEnemyTurn(); return; }
 
-        // Myroom에서 넘어온 이름으로 EnemyX 타입 로드
-        string enemyName = string.IsNullOrEmpty(BattleContext.EnemyName) ? "Enemy1" : BattleContext.EnemyName;
-        var t = FindTypeByName(enemyName);
-        if (t == null) { Debug.LogWarning($"Enemy type not found: {enemyName}"); EndEnemyTurn(); return; }
+    string enemyName = string.IsNullOrEmpty(BattleContext.EnemyName) ? "Enemy1" : BattleContext.EnemyName;
+    var t = FindTypeByName(enemyName);
+    if (t == null) { Debug.LogWarning($"Enemy type not found: {enemyName}"); EndEnemyTurn(); return; }
 
-        var go = new GameObject($"_EnemyPattern_{enemyName}");
-        try
-        {
-        // TurnManager.cs → EnemyAttack() 내부 변경 부분만
+    var go = new GameObject($"_EnemyPattern_{enemyName}");
+    try
+    {
         var comp = go.AddComponent(t) as ICardPattern;
         if (comp == null) { EndEnemyTurn(); return; }
 
-        // 기존: attackController.ShowPattern(comp.Pattern16, AttackController.Panel.Player);
-        // 수정: timings + panel 전달
-        attackController.ShowPattern(comp.Pattern16, comp.Timings, AttackController.Panel.Player);
+        // 왼쪽(플레이어) 패널에 표시
+        var timings = comp.Timings ?? new float[16];
+        attackController.ShowPattern(comp.Pattern16, timings, AttackController.Panel.Player);
 
-        // 지연 시간 계산도 AttackController가 산출한 총 소요시간 사용
-        float delay = attackController.LastTotalDuration + 0.05f;
-        Invoke(nameof(EndEnemyTurn), delay);
-
-        }
-        finally
-        {
-            Destroy(go);
-        }
+        float total = attackController.GetSequenceDuration(timings);
+        Invoke(nameof(EndEnemyTurn), total);
+    }
+    finally
+    {
+        Destroy(go);
+    }
     }
 
     void EndEnemyTurn()
